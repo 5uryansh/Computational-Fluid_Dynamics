@@ -12,16 +12,13 @@ L = 1
 W = 1
 Nx = 10
 Ny = 10
+convergence_factor = 1e-6
+alpha = k / (rho*cp)
+max_iter = 10000
 
 dx = L/Nx
 dy = W/Ny
-dt = 0.00001
-
-
-
-# creating arrays and initialising with zero value assuming m as n+1
-T_n = np.zeros((Nx+2, Ny+2))
-T_m = np.zeros((Nx+2, Ny+2))
+dt = (0.5 * dx**2)/alpha
 
 
 
@@ -67,10 +64,39 @@ def BCforArray(T1, T2, T_n):
 
 
 
+# creating arrays and initialising with zero value assuming m as n+1
+T_n = np.zeros((Nx+2, Ny+2))
+T_m = np.zeros((Nx+2, Ny+2))
 
 # applying boundary conditions
 T_n = BCforArray(T1, T2, T_n)
-# print(T_n)
+
+
+
+# updating T_n+1
+n = 0
+while(n < max_iter):
+    for i in range(1, Nx+1):
+        for j in range(1, Ny+1):
+            T_m[j, i] = (T_n[j, i] +
+                         alpha * dt * (
+                            (T_n[j+1, i] - 2*T_n[j, i] + T_n[j-1, i])/dx**2 +
+                            (T_n[j, i+1] - 2*T_n[j, i] + T_n[j, i-1])/dy**2
+                        ))
+        T_m = BCforArray(T1, T2, T_m)
+        
+    Rms = 0
+    for i in range(1, Nx):
+        for j in range(1, Ny):
+            Rms = Rms + (T_m[j, i] - T_n[j, i])**2
+    if Rms < convergence_factor:
+        print(T_m)
+        break
+    else:
+        T_n = T_m
+
+
+
 
 # Plot the array as a heatmap
 plt.imshow(T_n, cmap='viridis', interpolation='nearest')
