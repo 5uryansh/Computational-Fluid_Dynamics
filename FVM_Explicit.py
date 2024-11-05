@@ -10,9 +10,9 @@ cp = 500.0
 k = 16.2
 L = 1
 W = 1
-Nx = 20
+Nx = 10
 Ny = 20
-convergence_factor = 1e-6
+convergence_factor = 1e-3
 alpha = k / (rho*cp)
 max_iter = 10000
 
@@ -28,10 +28,11 @@ def boundary_condition(T_r, T_b):
 
 # defining BC function for T_n
 def BCforArray(T1, T2, T_n):
-    Nx = T_n.shape[0] - 2
-    Ny = T_n.shape[1] - 2
+    Nx = T_n.shape[1] - 2
+    Ny = T_n.shape[0] - 2
     
-    for i in range(0, Nx+1):
+    # changing y
+    for i in range(0, Ny+1):
         # for left wall
         T_r = T_n[i, 1]
         T_n[i, 0] = boundary_condition(T_r, T1)
@@ -40,7 +41,7 @@ def BCforArray(T1, T2, T_n):
         T_r = T_n[i, Nx]
         T_n[i, Nx+1] = boundary_condition(T_r, T1)
 
-    for j in range(0, Ny+1):
+    for j in range(0, Nx+1):
         # for top wall
         T_r = T_n[1, j]
         T_n[0, j] = boundary_condition(T_r, T2)
@@ -55,11 +56,15 @@ def BCforArray(T1, T2, T_n):
 
 
 # creating arrays and initialising with zero value assuming m as n+1
-T_n = np.zeros((Nx+2, Ny+2))
-T_m = np.zeros((Nx+2, Ny+2))
+T_n = np.zeros((Ny+2, Nx+2))
+T_m = np.zeros((Ny+2, Nx+2))
 
 # applying boundary conditions
 T_n = BCforArray(T1, T2, T_n)
+# Plot the array as a heatmap
+plt.imshow(T_n, cmap='viridis', interpolation='nearest')
+plt.colorbar()
+plt.show()
 
 # defining time as needed to plot at center
 time = 0
@@ -71,8 +76,8 @@ T_center = []
 # updating T_n+1
 n = 0
 while(n < max_iter):
-    for i in range(1, Nx+1):
-        for j in range(1, Ny+1):
+    for i in range(1, Ny+1):
+        for j in range(1, Nx+1):
             T_m[i, j] = (T_n[i, j] +
                          alpha * dt * (
                             (T_n[i+1, j] - 2*T_n[i, j] + T_n[i-1, j])/dy**2 +
@@ -81,8 +86,8 @@ while(n < max_iter):
         T_m = BCforArray(T1, T2, T_m)
         
     Rms = 0
-    for i in range(1, Nx):
-        for j in range(1, Ny):
+    for i in range(1, Ny):
+        for j in range(1, Nx):
             Rms = Rms + (T_m[i, j] - T_n[i, j])**2
     
     Rms = (Rms/(Nx*Ny))**0.5
@@ -94,20 +99,29 @@ while(n < max_iter):
     else:
         print(f"No. of iterations: {n}")
         time_passed.append(n*dt)
-        x = int(Nx/2 - 1)
-        y = int(Ny/2 - 1)
-        T_center.append(T_n[x, y])
+        i_center = int(Ny/2 - 1)
+        j_center = int(Nx/2 - 1)
+        T_center.append(T_n[i_center, j_center])
         n = n+1
 
 # defining temperature without fictious cell
-T = np.zeros((Nx, Ny))
+T = np.zeros((Ny, Nx))
 for i in range(0, Ny):
     for j in range(0, Nx):
         T[i, j] = T_m[i+1, j+1]
 
 
 # Plot the array as a heatmap
-plt.imshow(T, cmap='viridis', interpolation='nearest')
-# plt.plot(time_passed, T_center)
-plt.colorbar()
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+cax = ax1.imshow(T, cmap='viridis', interpolation='nearest')
+fig.colorbar(cax, ax=ax1)  # Add colorbar to the heatmap
+ax1.set_title("Heatmap of Temperature")
+
+ax2.plot(time_passed, T_center)
+ax2.set_title("Temperature at Center vs. Time")
+ax2.set_xlabel("Time")
+ax2.set_ylabel("Temperature")
+
+plt.tight_layout()
 plt.show()
