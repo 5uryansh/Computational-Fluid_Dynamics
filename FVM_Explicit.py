@@ -11,7 +11,7 @@ k = 16.2
 L = 1
 W = 1
 Nx = 10
-Ny = 20
+Ny = 10
 convergence_factor = 1e-3
 alpha = k / (rho*cp)
 max_iter = 10000
@@ -21,6 +21,14 @@ dy = W/Ny
 dt = (0.1 * dx**2)/alpha
 
 
+# for analytical solution, taking infinity as 100 by default
+def analytical_temperature(x, y, T1, T2, L, W, terms=50):
+    T = T1 + (T2 - T1) * (2 / np.pi) * sum(
+        [( (-1)**(n + 1) + 1 ) / n * np.sin(n * np.pi * x / L) * 
+         np.sinh(n * np.pi * y / L) / np.sinh(n * np.pi * W / L)
+        for n in range(1, terms + 1)]
+    )
+    return T
 
 # defining the boundary conditions function
 def boundary_condition(T_r, T_b):
@@ -61,10 +69,7 @@ T_m = np.zeros((Ny+2, Nx+2))
 
 # applying boundary conditions
 T_n = BCforArray(T1, T2, T_n)
-# Plot the array as a heatmap
-plt.imshow(T_n, cmap='viridis', interpolation='nearest')
-plt.colorbar()
-plt.show()
+
 
 # defining time as needed to plot at center
 time = 0
@@ -110,6 +115,37 @@ for i in range(0, Ny):
     for j in range(0, Nx):
         T[i, j] = T_m[i+1, j+1]
 
+
+
+
+# comparing analytical and numerical result along x = 0.5
+# numerical_T_x05 = T[:, int(Nx/2)] this value needed to be reversed as y=0 is not j = 0
+# reversed value is given by below code
+numerical_T_x05 = T[::-1, int(Nx/2)]
+numerical_T_y05 = T[int(Ny/2), :]
+y_values = np.linspace(0, W, len(numerical_T_x05))
+x_values = np.linspace(0, L, len(numerical_T_y05))
+analytical_T_x05 = [analytical_temperature(0.5, y, T1, T2, L, W, 100) for y in y_values]
+analytical_T_y05 = [analytical_temperature(x, 0.5, T1, T2, L, W, 100) for x in x_values]
+
+# Plot comparison along x=0.5
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+plt.plot(y_values, numerical_T_x05, label="Numerical", marker="o")
+plt.plot(y_values, analytical_T_x05, label="Analytical", linestyle="--")
+plt.xlabel("y along x = 0.5")
+plt.ylabel("Temperature (°C)")
+plt.title("Temperature Profile along x = 0.5")
+plt.legend()
+
+# Plot comparison along y=0.5
+plt.subplot(1, 2, 2)
+plt.plot(x_values, numerical_T_y05, label="Numerical", marker="o")
+plt.plot(x_values, analytical_T_y05, label="Analytical", linestyle="--")
+plt.xlabel("x along y = 0.5")
+plt.ylabel("Temperature (°C)")
+plt.title("Temperature Profile along y = 0.5")
+plt.legend()
 
 # Plot the array as a heatmap
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
